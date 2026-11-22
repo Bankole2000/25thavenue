@@ -11,7 +11,11 @@ export interface BlogPost {
   categories: string[]
   date: string
   author: string
+  // The featured image set in WordPress, full size. Shown at the top of the article.
   image?: { src: string, alt: string }
+  // For previews (cards, link previews): the featured image at a card-friendly size, or failing that
+  // the first image in the post's content.
+  thumbnail?: { src: string, alt: string }
   // Only present when a single post is fetched. This is HTML from WordPress.
   html?: string
 }
@@ -25,11 +29,17 @@ interface WordPressPost {
   _embedded?: {
     'author'?: { name?: string }[]
     'wp:term'?: { name: string, taxonomy: string }[][]
-    'wp:featuredmedia'?: { source_url?: string, alt_text?: string }[]
+    'wp:featuredmedia'?: {
+      source_url?: string
+      alt_text?: string
+      media_details?: { sizes?: Record<string, { source_url?: string }> }
+    }[]
   }
 }
 
 const listFields = 'slug,date,title,excerpt,_links,_embedded'
+// Lists also fetch the content, only to find a preview image for posts without a featured image.
+const listWithContentFields = `${listFields},content`
 const embeds = 'author,wp:term,wp:featuredmedia'
 const pageSize = 100
 
@@ -61,13 +71,32 @@ function htmlToText(html: string) {
     .trim()
 }
 
-function toBlogPost(post: WordPressPost): BlogPost {
+// The first image in a post's HTML, picking a medium-sized version from its srcset when there is one.
+function firstContentImage(html: string | undefined, fallbackAlt: string) {
+  const tag = html?.match(/<img\b[^>]*>/i)?.[0]
+  if (!tag) return undefined
+  const attribute = (name: string) => tag.match(new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i'))?.[1]
+  const src = attribute('src')
+  if (!src) return undefined
+  const candidates = (attribute('srcset') ?? '')
+    .split(',')
+    .map(part => part.trim().split(/\s+/))
+    .map(([url, width]) => ({ url, width: Number.parseInt(width ?? '', 10) }))
+    .filter(candidate => candidate.url && candidate.width >= 600)
+    .sort((a, b) => a.width - b.width)
+  return { src: candidates[0]?.url ?? src, alt: htmlToText(attribute('alt') ?? '') || fallbackAlt }
+}
+
+function toBlogPost(post: WordPressPost, includeHtml = true): BlogPost {
   const categories = (post._embedded?.['wp:term'] ?? [])
     .flat()
     .filter(term => term.taxonomy === 'category')
     .map(term => (term.name === 'Uncategorized' ? 'General' : htmlToText(term.name)))
   const media = post._embedded?.['wp:featuredmedia']?.[0]
   const title = htmlToText(post.title.rendered)
+  const image = media?.source_url ? { src: media.source_url, alt: media.alt_text || title } : undefined
+  const sizes = media?.media_details?.sizes
+  const cardSrc = sizes?.medium_large?.source_url ?? sizes?.large?.source_url ?? media?.source_url
 
   return {
     slug: post.slug,
@@ -77,8 +106,9 @@ function toBlogPost(post: WordPressPost): BlogPost {
     categories: categories.length ? categories : ['General'],
     date: post.date.slice(0, 10),
     author: htmlToText(post._embedded?.author?.[0]?.name ?? '25th Avenue team'),
-    image: media?.source_url ? { src: media.source_url, alt: media.alt_text || title } : undefined,
-    html: post.content?.rendered,
+    image,
+    thumbnail: image && cardSrc ? { src: cardSrc, alt: image.alt } : firstContentImage(post.content?.rendered, title),
+    html: includeHtml ? post.content?.rendered : undefined,
   }
 }
 
@@ -96,13 +126,13 @@ export function useBlogPosts() {
     let totalPages = 1
     do {
       const response = await $fetch.raw<WordPressPost[]>(endpoint, {
-        query: { per_page: pageSize, page, _fields: listFields, _embed: embeds },
+        query: { per_page: pageSize, page, _fields: listWithContentFields, _embed: embeds },
       })
       posts.push(...(response._data ?? []))
       totalPages = Number(response.headers.get('X-WP-TotalPages') ?? 1)
       page++
     } while (page <= totalPages)
-    return posts.map(toBlogPost)
+    return posts.map(post => toBlogPost(post, false))
   })
 }
 

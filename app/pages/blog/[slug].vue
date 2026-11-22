@@ -26,14 +26,14 @@ watch(data, (latest) => {
   if (latest === null) showError({ statusCode: 404, statusMessage: 'Article not found', fatal: true })
 })
 
-usePageSeo(initialPost.title, initialPost.excerpt, initialPost.image?.src)
+usePageSeo(initialPost.title, initialPost.excerpt, initialPost.image?.src ?? initialPost.thumbnail?.src)
 
 useSchemaOrg([
   defineArticle({
     headline: initialPost.title,
     description: initialPost.excerpt,
     datePublished: initialPost.date,
-    image: initialPost.image?.src,
+    image: initialPost.image?.src ?? initialPost.thumbnail?.src,
     author: { name: initialPost.author },
   }),
 ])
