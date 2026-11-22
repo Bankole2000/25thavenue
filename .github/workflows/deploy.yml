@@ -1,0 +1,74 @@
+# Builds the static site from the latest WordPress content and uploads it to the web host over FTP.
+#
+# Runs when:
+# - WordPress asks for it (the 25th Avenue plugin, a few minutes after content changes, or
+#   "Publish website now" under 25th Avenue → Site details), via workflow_dispatch;
+# - code is pushed to main;
+# - every night, as a safety net;
+# - someone clicks "Run workflow" on the Actions tab.
+#
+# Needs these repository secrets (Settings → Secrets and variables → Actions):
+#   FTP_SERVER      e.g. ftp.25thavenuecreative.com
+#   FTP_USERNAME
+#   FTP_PASSWORD
+#   FTP_SERVER_DIR  the folder the site is served from, ending in a slash, e.g. public_html/
+# Optional repository variables:
+#   CMS_URL         defaults to https://cms.25thavenuecreative.com
+#   FTP_PROTOCOL    ftp (default) or ftps
+
+name: Build and deploy website
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why this deploy was started
+        required: false
+        default: Started by hand
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 2 * * *' # 02:00 UTC, 03:00 in Lagos
+
+# One deploy at a time. A request that arrives mid-deploy waits, and only the newest waiting one runs.
+concurrency:
+  group: deploy-website
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Reason
+        run: echo "${{ github.event.inputs.reason || github.event_name }}"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npx nuxt generate
+        env:
+          NUXT_PUBLIC_CMS_URL: ${{ vars.CMS_URL || 'https://cms.25thavenuecreative.com' }}
+
+      # Uploads only files that changed since the last deploy (tracked in .ftp-deploy-sync-state.json
+      # on the server), and removes files a previous deploy uploaded that no longer exist.
+      - name: Upload over FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          protocol: ${{ vars.FTP_PROTOCOL || 'ftp' }}
+          local-dir: ./.output/public/
