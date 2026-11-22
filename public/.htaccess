@@ -1,0 +1,32 @@
+# Force HTTPS
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Optional: force non-www
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
+# Blog posts published after the last build have no page file yet. Serve the app shell instead,
+# which loads the post from WordPress in the browser (and shows "not found" if there isn't one).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/[^/]+/?$ /200.html [L]
+
+# Nuxt generates a 404 page
+ErrorDocument 404 /404.html
+
+# Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>
+
+# Caching: hashed build assets forever, HTML never
+<IfModule mod_headers.c>
+  <If "%{REQUEST_URI} =~ m#^/_nuxt/#">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </If>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>

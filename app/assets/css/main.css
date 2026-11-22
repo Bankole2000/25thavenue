@@ -1,0 +1,108 @@
+/* Global type and shared helpers. Colours come from the Vuetify theme in plugins/vuetify.js. */
+.v-application,
+.v-application .v-btn,
+.v-application .v-card,
+.v-application .v-card-title,
+.v-application .v-chip,
+.v-application .v-field,
+.v-application .v-label,
+.v-application .v-list-item-title,
+.v-application .v-expansion-panel-title,
+.v-application .v-stepper-item,
+.v-application .v-date-picker {
+  font-family: 'Overpass', 'Arial Narrow', Arial, sans-serif;
+}
+
+/* Vuetify's default text colour is 87% opaque. Keep body text at full strength. */
+.v-application {
+  color: rgb(var(--v-theme-on-background));
+}
+
+.v-application .v-btn {
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* No borders on cards or buttons. Cards get a faint light lift instead so they still stand out
+   from the section behind them, and outlined buttons a faint fill so they still read as buttons. */
+.v-application .v-card {
+  border: 0;
+  background-color: rgb(255 255 255 / 4%);
+}
+
+.v-application .v-btn {
+  border: 0;
+}
+
+.v-application .v-btn--variant-outlined {
+  background-color: rgb(255 255 255 / 10%);
+}
+
+.v-application a:focus-visible,
+.v-application .v-btn:focus-visible {
+  outline: 3px solid rgb(var(--v-theme-secondary));
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #6f0100;
+  color: #fff;
+}
+
+/* Vuetify fades field labels below the WCAG AA contrast ratio. */
+.v-application .v-field-label,
+.v-application .v-input__details {
+  color: rgb(var(--v-theme-muted));
+  opacity: 1;
+}
+
+.v-application .v-container {
+  max-width: 1120px;
+  padding-inline: 24px;
+}
+
+.type-display {
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+
+.type-heading {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.type-subheading {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.type-lead {
+  max-width: 52ch;
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+.type-body {
+  max-width: 68ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+.text-muted-ink {
+  color: rgb(var(--v-theme-muted));
+}
+
+.plain-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.anchor-target {
+  scroll-margin-top: 88px;
+}

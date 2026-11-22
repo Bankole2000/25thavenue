@@ -1,0 +1,22 @@
+{
+  "servers": {
+    "vuetify-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vuetify/mcp"
+      ],
+      "type": "remote",
+      "url": "https://mcp.vuetifyjs.com/mcp"
+    }
+  },
+  "mcpServers": {
+    "vuetify-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@vuetify/mcp"
+      ]
+    }
+  }
+}
